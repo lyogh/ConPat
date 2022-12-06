@@ -41,9 +41,9 @@ type testData struct {
 
 func TestWorkerPool(t *testing.T) {
 	var test []testData = []testData{
-		{task: NewTask("string"), handler: &Printer{}, result: &TaskResult{data: nil, err: nil}},
-		{task: NewTask(1), handler: &X3Multiplier{}, result: &TaskResult{data: 3, err: nil}},
-		{task: NewTask("string"), handler: &Formatter{}, result: &TaskResult{data: "(string)", err: nil}},
+		{task: NewTask("string"), handler: &Printer{}, result: &TaskResult{Data: nil, Err: nil}},
+		{task: NewTask(1), handler: &X3Multiplier{}, result: &TaskResult{Data: 3, Err: nil}},
+		{task: NewTask("string"), handler: &Formatter{}, result: &TaskResult{Data: "(string)", Err: nil}},
 	}
 
 	w := NewPool(runtime.NumCPU())

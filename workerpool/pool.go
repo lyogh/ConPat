@@ -170,7 +170,7 @@ func (p *WorkerPool) createWorker() {
 		// Получаем задачу на обработку
 		for ht := range p.tasks {
 			r, err := ht.Do(ht.Task)
-			ht.addResult(&TaskResult{data: r, err: err})
+			ht.addResult(&TaskResult{Data: r, Err: err})
 
 			// Отправляем результат
 			p.result <- ht

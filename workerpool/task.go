@@ -67,5 +67,5 @@ func (wt *workTask) addResult(r *TaskResult) {
 }
 
 func (r *TaskResult) String() string {
-	return fmt.Sprintf("Результат обработки [%v,%v]", r.data, r.err)
+	return fmt.Sprintf("Результат обработки [%v,%v]", r.Data, r.Err)
 }
