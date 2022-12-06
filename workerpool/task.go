@@ -7,8 +7,8 @@ import (
 
 // Результат обработки задачи
 type TaskResult struct {
-	data any   // Данные
-	err  error // или ошибка
+	Data any   // Данные
+	Err  error // или ошибка
 }
 
 // Задача на обработку
@@ -26,8 +26,6 @@ type workTask struct {
 
 // Обработчик задачи
 type Handler interface {
-	//	fmt.Stringer
-
 	Do(*Task) (any, error)
 }
 
