@@ -1,6 +1,9 @@
 package workerpool
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 // Результат обработки задачи
 type TaskResult struct {
@@ -23,8 +26,12 @@ type workTask struct {
 
 // Обработчик задачи
 type Handler interface {
+	//	fmt.Stringer
+
 	Do(*Task) (any, error)
 }
+
+type queue []*workTask
 
 // Создает задачу
 func NewTask(d any) *Task {
@@ -38,6 +45,10 @@ func NewTask(d any) *Task {
 // Возвращает результаты обработки задач всеми обработчиками
 func (t *Task) Results() map[Handler]*TaskResult {
 	return t.result
+}
+
+func (t *Task) String() string {
+	return fmt.Sprintf("Задача [%v]", t.Data)
 }
 
 // Возвращает первый результат обработки задач
@@ -55,4 +66,8 @@ func (wt *workTask) addResult(r *TaskResult) {
 	defer wt.Unlock()
 
 	wt.result[wt.Handler] = r
+}
+
+func (r *TaskResult) String() string {
+	return fmt.Sprintf("Результат обработки [%v,%v]", r.data, r.err)
 }
