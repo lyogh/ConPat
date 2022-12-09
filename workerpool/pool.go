@@ -1,11 +1,14 @@
 package workerpool
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
@@ -46,8 +49,14 @@ type WorkerPool struct {
 	}
 }
 
+var ErrLowWorkersCount = errors.New("слишком мало обработчиков задач")
+
 // Создает новый пул
-func NewPool(max int) *WorkerPool {
+func NewPool(max int) (*WorkerPool, error) {
+	if max < 1 {
+		return nil, ErrLowWorkersCount
+	}
+
 	w := &WorkerPool{}
 
 	w.workers.max = max
@@ -59,10 +68,10 @@ func NewPool(max int) *WorkerPool {
 	// Сразу планируем получение результата обработки задач
 	go w.receive()
 
-	return w
+	return w, nil
 }
 
-// Режим журналирования сообщений
+// Определяет режим журналирования сообщений
 func (p *WorkerPool) SetLogMode(m logMode) {
 	p.logger.mode = m
 }
@@ -76,13 +85,14 @@ func (p *WorkerPool) receive() {
 }
 
 // Отправляет задачу на выполнение
-func (p *WorkerPool) Do(t *Task, hndl ...Handler) {
+func (p *WorkerPool) Do(ctx context.Context, t *Task, hndl ...Handler) {
 	for _, h := range hndl {
 		p.createWorker()
 
 		wt := &workTask{
 			Task:    t,
 			Handler: h,
+			ctx:     ctx,
 		}
 
 		p.wg.Add(1)
@@ -93,10 +103,6 @@ func (p *WorkerPool) Do(t *Task, hndl ...Handler) {
 			p.log(LogModeTrace, t, fmt.Sprintf("успешно отправлена на обработку %v", wt.Handler))
 			// Сразу не получилось, отправим позже, на вызове метода Wait
 		default:
-			/*go func() {
-				p.tasks <- wt
-			}()
-			p.log(LogModeTrace, t, fmt.Sprintf("нет свободных обработчиков, обработка %v будет выполнена позже", wt.Handler))*/
 			p.addToQueue(wt)
 		}
 	}
@@ -169,7 +175,7 @@ func (p *WorkerPool) createWorker() {
 
 		// Получаем задачу на обработку
 		for ht := range p.tasks {
-			r, err := ht.Do(ht.Task)
+			r, err := ht.Do(ht.ctx, ht.Task)
 			ht.addResult(&TaskResult{Data: r, Err: err})
 
 			// Отправляем результат
@@ -187,11 +193,15 @@ func (p *WorkerPool) Wait() {
 
 	p.log(LogModeTrace, nil, "ожидание завершения обработки")
 	p.wg.Wait()
+
+	p.close()
 }
 
 // Добавляет сообщение в журнал
 func (p *WorkerPool) log(m logMode, t *Task, v any) {
 	var prefix string
+
+	time.Sleep(1 * time.Second)
 
 	if p.logger.mode == LogModeNone ||
 		m != p.logger.mode && m != LogModeTrace {
@@ -206,7 +216,7 @@ func (p *WorkerPool) log(m logMode, t *Task, v any) {
 }
 
 // Закрывает пул
-func (p *WorkerPool) Close() {
+func (p *WorkerPool) close() {
 	close(p.tasks)
 	close(p.result)
 	close(p.workers.ch)

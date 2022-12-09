@@ -1,6 +1,7 @@
 package workerpool
 
 import (
+	"context"
 	"fmt"
 	"sync"
 )
@@ -19,14 +20,15 @@ type Task struct {
 
 // Задача в работе
 type workTask struct {
-	sync.Mutex // Семафор
-	*Task      // Задача
-	Handler    // Обработчик
+	sync.Mutex                 // Семафор
+	*Task                      // Задача
+	Handler                    // Обработчик
+	ctx        context.Context // Контекст
 }
 
 // Обработчик задачи
 type Handler interface {
-	Do(*Task) (any, error)
+	Do(context.Context, *Task) (any, error)
 }
 
 type queue []*workTask

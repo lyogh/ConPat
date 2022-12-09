@@ -1,18 +1,20 @@
 package workerpool
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"reflect"
 	"runtime"
 	"testing"
+	"time"
 )
 
 // Добавляет к данным скобки
 type Formatter struct {
 }
 
-func (p *Formatter) Do(t *Task) (any, error) {
+func (p *Formatter) Do(cxt context.Context, t *Task) (any, error) {
 	return fmt.Sprintf("(%v)", t.Data), nil
 }
 
@@ -20,7 +22,7 @@ func (p *Formatter) Do(t *Task) (any, error) {
 type Printer struct {
 }
 
-func (p *Printer) Do(t *Task) (any, error) {
+func (p *Printer) Do(cxt context.Context, t *Task) (any, error) {
 	log.Println(t)
 	return nil, nil
 }
@@ -29,7 +31,13 @@ func (p *Printer) Do(t *Task) (any, error) {
 type X3Multiplier struct {
 }
 
-func (p *X3Multiplier) Do(t *Task) (any, error) {
+func (p *X3Multiplier) Do(ctx context.Context, t *Task) (any, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-time.After(time.Second * 10):
+	}
+
 	return 3 * t.Data.(int), nil
 }
 
@@ -46,14 +54,18 @@ func TestWorkerPool(t *testing.T) {
 		{task: NewTask("string"), handler: &Formatter{}, result: &TaskResult{Data: "(string)", Err: nil}},
 	}
 
-	w := NewPool(runtime.NumCPU())
+	w, err := NewPool(runtime.NumCPU())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
 
 	for _, td := range test {
-		w.Do(td.task, td.handler)
+		w.Do(ctx, td.task, td.handler)
 	}
 
 	w.Wait()
-	w.Close()
 
 	for _, td := range test {
 		res := td.task.Results()
